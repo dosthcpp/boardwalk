@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "273048103116",
+    "project_id": "boardwalk-328510",
+    "storage_bucket": "boardwalk-328510.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:273048103116:android:6543128e251e104c107a69",
+        "android_client_info": {
+          "package_name": "com.nodennect.boardwalk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "273048103116-gviphoa4ggk6tmv5l5kqslvdoq4m29m0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhzUN5j6Mc5phVb3fBg39_iQhL88Dnh60"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "273048103116-gviphoa4ggk6tmv5l5kqslvdoq4m29m0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "273048103116-lqeup5vkki58qop7vud2u0m4s4mbv7il.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.nodennect.boardwalk"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

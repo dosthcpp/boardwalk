@@ -1,0 +1,35 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-boardwalkmobilemvp-dev-163935-authRole",
+      "UnauthRoleArn": "arn:aws:iam::253470431111:role/amplify-boardwalkmobilemvp-dev-163935-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::253470431111:role/amplify-boardwalkmobilemvp-dev-163935-authRole",
+      "Region": "ap-northeast-1",
+      "DeploymentBucketName": "amplify-boardwalkmobilemvp-dev-163935-deployment",
+      "UnauthRoleName": "amplify-boardwalkmobilemvp-dev-163935-unauthRole",
+      "StackName": "amplify-boardwalkmobilemvp-dev-163935",
+      "StackId": "arn:aws:cloudformation:ap-northeast-1:253470431111:stack/amplify-boardwalkmobilemvp-dev-163935/0b54dbb0-36f9-11ec-ba50-0e4acf195e11",
+      "AmplifyAppId": "d7fl5m5pyzzr5"
+    },
+    "categories": {
+      "function": {
+        "boardwalkmobilemvp1730a6a71730a6a7CustomMessage": {
+          "REDIRECTURL": "",
+          "EMAILSUBJECT": "Please confirm your email",
+          "EMAILMESSAGE": "Please use this code:",
+          "deploymentBucketName": "amplify-boardwalkmobilemvp-dev-163935-deployment",
+          "s3Key": "amplify-builds/boardwalkmobilemvp1730a6a71730a6a7CustomMessage-67796d57657447416259-build.zip"
+        },
+        "AdminQueriesca7fd09a": {
+          "deploymentBucketName": "amplify-boardwalkmobilemvp-dev-163935-deployment",
+          "s3Key": "amplify-builds/AdminQueriesca7fd09a-727978326847416d5532-build.zip"
+        }
+      },
+      "auth": {
+        "boardwalkmobilemvp1730a6a71730a6a7": {
+          "googleClientId": "273048103116-gviphoa4ggk6tmv5l5kqslvdoq4m29m0.apps.googleusercontent.com"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "trigger": true,
+  "modules": [
+    "verification-link"
+  ],
+  "parentResource": "boardwalkmobilemvp1730a6a71730a6a7",
+  "functionName": "boardwalkmobilemvp1730a6a71730a6a7CustomMessage",
+  "resourceName": "boardwalkmobilemvp1730a6a71730a6a7CustomMessage",
+  "parentStack": "auth",
+  "triggerEnvs": "[\n  {\n    \"key\": \"RESOURCENAME\",\n    \"value\": \"resourceName\"\n  }\n]",
+  "triggerDir": "/Users/babosangjamk4/.nvm/versions/node/v15.14.0/lib/node_modules/@aws-amplify/cli/node_modules/amplify-category-auth/provider-utils/awscloudformation/triggers/CustomMessage",
+  "triggerTemplate": "CustomMessage.json.ejs",
+  "triggerEventPath": "CustomMessage.event.json",
+  "roleName": "boardwalkmobilemvp1730a6a71730a6a7CustomMessage",
+  "skipEdit": true,
+  "REDIRECTURL": "",
+  "EMAILSUBJECT": "Please confirm your email",
+  "EMAILMESSAGE": "Please use this code:",
+  "RESOURCENAME": "resourceName",
+  "enableCors": false
+}

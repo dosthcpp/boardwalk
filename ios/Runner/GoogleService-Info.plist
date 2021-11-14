@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>273048103116-lqeup5vkki58qop7vud2u0m4s4mbv7il.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.273048103116-lqeup5vkki58qop7vud2u0m4s4mbv7il</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>273048103116-au8iuetig1la1afu2bi3bp56vstgooh8.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyC7RfnoDH4cMmjH9qIj-ppsvD0t0HLVPOw</string>
+	<key>GCM_SENDER_ID</key>
+	<string>273048103116</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.nodennect.boardwalk</string>
+	<key>PROJECT_ID</key>
+	<string>boardwalk-328510</string>
+	<key>STORAGE_BUCKET</key>
+	<string>boardwalk-328510.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:273048103116:ios:b5aa04e67825b6c2107a69</string>
+</dict>
+</plist>

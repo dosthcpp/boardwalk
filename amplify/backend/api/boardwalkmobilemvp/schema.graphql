@@ -1,0 +1,21 @@
+type LoginCredential @model {
+  id: ID!
+  isGoogle: Boolean!
+  isApple: Boolean!
+  credential: String!
+  email: String
+  name: String
+  nickname: String
+}
+
+type Session @model {
+  id: ID!
+  title: String!
+  description: String
+  participants: [String!]!
+}
+
+enum SessionStatus {
+  DRAFT
+  PUBLISHED
+}

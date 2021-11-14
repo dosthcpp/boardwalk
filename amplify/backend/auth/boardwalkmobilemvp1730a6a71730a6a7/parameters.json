@@ -1,0 +1,106 @@
+{
+    "identityPoolName": "boardwalkmobilemvp1730a6a7_identitypool_1730a6a7",
+    "allowUnauthenticatedIdentities": false,
+    "resourceNameTruncated": "boardw1730a6a7",
+    "userPoolName": "boardwalkmobilemvp1730a6a7_userpool_1730a6a7",
+    "autoVerifiedAttributes": [
+        "phone_number"
+    ],
+    "mfaConfiguration": "OFF",
+    "mfaTypes": [
+        "SMS Text Message"
+    ],
+    "smsAuthenticationMessage": "Your authentication code is {####}",
+    "smsVerificationMessage": "Please use this code: {####}",
+    "emailVerificationSubject": "Your verification code",
+    "emailVerificationMessage": "Your verification code is {####}",
+    "defaultPasswordPolicy": true,
+    "passwordPolicyMinLength": 8,
+    "passwordPolicyCharacters": [
+        "Requires Lowercase",
+        "Requires Uppercase",
+        "Requires Numbers",
+        "Requires Symbols"
+    ],
+    "requiredAttributes": [
+        "address",
+        "email",
+        "nickname",
+        "phone_number"
+    ],
+    "userpoolClientGenerateSecret": false,
+    "userpoolClientRefreshTokenValidity": 30,
+    "userpoolClientWriteAttributes": [
+        "birthdate",
+        "family_name",
+        "given_name",
+        "name",
+        "picture",
+        "profile",
+        "address",
+        "email",
+        "nickname",
+        "phone_number"
+    ],
+    "userpoolClientReadAttributes": [
+        "birthdate",
+        "email",
+        "name",
+        "nickname",
+        "phone_number"
+    ],
+    "userpoolClientLambdaRole": "boardw1730a6a7_userpoolclient_lambda_role",
+    "userpoolClientSetAttributes": false,
+    "sharedId": "1730a6a7",
+    "resourceName": "boardwalkmobilemvp1730a6a71730a6a7",
+    "authSelections": "identityPoolAndUserPool",
+    "authRoleArn": {
+        "Fn::GetAtt": [
+            "AuthRole",
+            "Arn"
+        ]
+    },
+    "unauthRoleArn": {
+        "Fn::GetAtt": [
+            "UnauthRole",
+            "Arn"
+        ]
+    },
+    "useDefault": "manual",
+    "thirdPartyAuth": true,
+    "authProviders": [
+        "accounts.google.com"
+    ],
+    "usernameAttributes": [
+        "email, phone_number"
+    ],
+    "userPoolGroups": false,
+    "adminQueries": false,
+    "triggers": "{\n  \"CustomMessage\": [\n    \"verification-link\"\n  ]\n}",
+    "hostedUI": false,
+    "audiences": [
+        "273048103116-gviphoa4ggk6tmv5l5kqslvdoq4m29m0.apps.googleusercontent.com"
+    ],
+    "userPoolGroupList": [],
+    "adminQueryGroup": "boardwalkteam",
+    "serviceName": "Cognito",
+    "verificationBucketName": "boardwalkmobilemvp1730a6a71730a6a7verificationbucket",
+    "usernameCaseSensitive": false,
+    "parentStack": {
+        "Ref": "AWS::StackId"
+    },
+    "authTriggerConnections": "[\n  {\n    \"triggerType\": \"CustomMessage\",\n    \"lambdaFunctionName\": \"boardwalkmobilemvp1730a6a71730a6a7CustomMessage\"\n  }\n]",
+    "breakCircularDependency": true,
+    "permissions": [],
+    "dependsOn": [
+        {
+            "category": "function",
+            "resourceName": "boardwalkmobilemvp1730a6a71730a6a7CustomMessage",
+            "triggerProvider": "Cognito",
+            "attributes": [
+                "Arn",
+                "Name"
+            ]
+        }
+    ]
+}
