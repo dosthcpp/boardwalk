@@ -32,6 +32,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String countryCode = '82';
   String lastName = '';
   String firstName = '';
+  String _password = '';
   final _authService = AuthService();
   bool verificationBtnClicked = false;
   final TextEditingController phoneNumberTE = TextEditingController(
@@ -252,7 +253,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               children: [
                                 TextFormField(
                                   onChanged: (password) {
-                                    userProvider.setPassword(password);
+                                    _password = password;
                                   },
                                   autovalidateMode: AutovalidateMode.always,
                                   validator: (password) {
@@ -435,8 +436,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                                           userProvider
                                                               .getEmail()
                                                               .isNotEmpty &&
-                                                          userProvider
-                                                              .getPassword()
+                                                          _password
                                                               .isNotEmpty) {
                                                         if (_timer.isActive) {
                                                           _timer.cancel();
@@ -448,6 +448,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                                           var code =
                                                               await _authService
                                                                   .sendAuthNumber(
+                                                            _password,
                                                             phoneNumber,
                                                             dob.text,
                                                             '$lastName$firstName}',
@@ -577,6 +578,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                                           // verified
                                                           showToast(
                                                               'Your phone number is successfully verified!');
+                                                          await _authService.createSignInModel(userProvider.getEmail());
                                                           setState(() {
                                                             verified = true;
                                                           });

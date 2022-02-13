@@ -6,7 +6,6 @@ import 'package:boardwalk/test/test_page_session_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:boardwalk/api/api_service.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:boardwalk/api/api_service.dart' show SessionProvider;
 import 'package:provider/provider.dart';
 import 'package:boardwalk/main.dart' show sessionProvider;
 
@@ -22,10 +21,16 @@ class TestPage extends StatefulWidget {
 }
 
 class TestPageArgs {
-  String curUser, id;
-  List<dynamic> participants = [];
+  String curUser, id, title, description;
+  Map<String, bool> participants = {};
 
-  TestPageArgs({required this.curUser, required this.id, required this.participants});
+  TestPageArgs({
+    required this.curUser,
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.participants,
+  });
 }
 
 class _TestPageState extends State<TestPage> {
@@ -50,10 +55,10 @@ class _TestPageState extends State<TestPage> {
         actions: [
           TextButton(
             onPressed: () {
-              _apiService.openSession(
-                'title',
-                'desc',
-              );
+              // _apiService.openSession(
+              //   'title',
+              //   'desc',
+              // );
             },
             child: const Text(
               '세션 추가',
@@ -99,19 +104,33 @@ class _TestPageState extends State<TestPage> {
                       session.sessionList[index]['title'],
                     ),
                     onTap: () async {
-                      final participants = await _apiService.enter(curId,
-                          session.sessionList[index]['participants'], curUser);
-                      curId = session.sessionList[index]['id'];
-                      Navigator.pushNamed(
-                        context,
-                        TestPageSessionDetail.id,
-                        arguments: TestPageArgs(
-                          id: curId,
-                          participants: participants,
-                          curUser: curUser as String,
-                        ),
-                      );
+                      // var _sessionInfo = session.sessionList[index];
+                      // final participants = await _apiService.join(
+                      //   _sessionInfo['id'],
+                      //   _sessionInfo['joined'],
+                      //   curUser,
+                      // );
+                      // Navigator.pushNamed(
+                      //   context,
+                      //   TestPageSessionDetail.id,
+                      //   arguments: TestPageArgs(
+                      //     id: _sessionInfo['id'],
+                      //     title: _sessionInfo['title'],
+                      //     description: _sessionInfo['notification'],
+                      //     participants: participants,
+                      //     curUser: curUser as String,
+                      //   ),
+                      // );
                     },
+                    trailing: Checkbox(
+                      value: session.sessionList[index]['checked'],
+                      onChanged: (value) {
+                        setState(() {
+                          session.check(index);
+                          curId = session.sessionList[index]['id'];
+                        });
+                      },
+                    ),
                   );
                 },
                 itemCount: session.sessionList.length,

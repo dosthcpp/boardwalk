@@ -8,11 +8,32 @@ type LoginCredential @model {
   nickname: String
 }
 
+type SignIn @model {
+  id: ID!
+  email: String
+  signedIn: Boolean!
+}
+
+type JoinedInput {
+  key: String
+  value: Boolean
+}
+
 type Session @model {
   id: ID!
+  host: String!
   title: String!
-  description: String
-  participants: [String!]!
+  notification: String!
+  address: String!
+  coordinate: [Float!]!
+  event: String!
+  startTime: String!
+  endTime: String!
+  participants: [Int!]!
+  joined: [JoinedInput]!
+  necessarySupplies: [String!]!
+  optionalSupplies: [String]!
+  report: Int!
 }
 
 enum SessionStatus {

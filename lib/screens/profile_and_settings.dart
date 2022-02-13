@@ -1,3 +1,4 @@
+import 'package:boardwalk/main.dart';
 import 'package:flutter/material.dart';
 import 'package:boardwalk/screens/detail.dart' show Profile;
 
@@ -48,6 +49,7 @@ class ProfileAndSettings extends StatelessWidget {
                 horizontal: 5.0,
               ),
               child: Profile(
+                hostName: userProvider.getNickname(),
                 buttonTitle: 'Edit',
               ),
             ),

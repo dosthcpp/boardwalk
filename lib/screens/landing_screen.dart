@@ -5,15 +5,18 @@ import 'package:boardwalk/main.dart';
 import 'package:boardwalk/screens/sign_up.dart';
 import 'package:boardwalk/screens/login.dart';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:boardwalk/screens/exception.dart' show ExceptionPage;
+import 'package:boardwalk/screens/home.dart';
 
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart' as apple;
 
 class LandingScreen extends StatefulWidget {
-  static const String id = 'lading_screen';
+  static const String id = 'landing_screen';
 
   const LandingScreen({Key? key}) : super(key: key);
 
@@ -24,6 +27,30 @@ class LandingScreen extends StatefulWidget {
 class _LandingScreenState extends State<LandingScreen> {
   final _authServiceThirdParty = AuthServiceThirdParty();
   final _loginCredential = LoginCredential();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    WidgetsBinding.instance!.addPostFrameCallback((_) async {
+      final _authService = AuthService();
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? email = prefs.getString('curEmail');
+      if(email != null && email.isNotEmpty) {
+        // String? passwd = await storage.read(key: email);
+        Map<String, dynamic> result = await _authService.restore(email);
+        if(result['claims'] == 'EXCEPTION'){
+          Navigator.pushNamed(context, ExceptionPage.id);
+        } else if(result['claims'] == null) {
+          // do nothing
+        } else {
+          userProvider.setEmail(email);
+          userProvider.setNickname(await _authService.getNickname());
+          Navigator.pushNamed(context, Home.id);
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

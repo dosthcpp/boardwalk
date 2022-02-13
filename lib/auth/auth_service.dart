@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:boardwalk/auth/auth_credentials.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:amplify_flutter/amplify.dart';
 import 'package:amplify_api/amplify_api.dart';
 import 'package:amplify_auth_cognito/amplify_auth_cognito.dart' as auth;
+import 'package:jwt_decode/jwt_decode.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:boardwalk/main.dart';
+import 'package:amazon_cognito_identity_dart_2/cognito.dart';
 
 enum AuthFlowStatus { login, signUp, verification, session }
 
@@ -22,7 +26,8 @@ class CognitoService {
 
 class AuthService {
   final authStateController = StreamController<AuthState>();
-  late SignUpCredentials _credentials;
+  final storage = FlutterSecureStorage();
+  late var _credentials;
 
   void showSignUp() {
     final state = AuthState(authFlowStatus: AuthFlowStatus.signUp);
@@ -49,12 +54,11 @@ class AuthService {
     return 'ok';
   }
 
-  Future<String> sendAuthNumber(phoneNumber, dob, fullName) async {
-    print(phoneNumber);
+  Future<String> sendAuthNumber(password, phoneNumber, dob, fullName) async {
     try {
       final auth.SignUpResult code = await Amplify.Auth.signUp(
         username: userProvider.getEmail(),
-        password: userProvider.getPassword(),
+        password: password,
         options: auth.CognitoSignUpOptions(
           userAttributes: {
             'name': fullName,
@@ -101,18 +105,77 @@ class AuthService {
     authStateController.add(state);
   }
 
-  Future<String> signIn() async {
+  Future<bool> hasSignedIn() async {
+    // final auth.CognitoAuthSession authState =
+    //     await Amplify.Auth.fetchAuthSession(
+    //   options: auth.CognitoSessionOptions(
+    //     getAWSCredentials: true,
+    //   ),
+    // ) as auth.CognitoAuthSession;
+    // print(authState.isSignedIn);
+    return false;
+    // return authState.isSignedIn;
+  }
+
+  toggleSignIn(bool signedIn) async {
     try {
-      auth.SignInResult result = await Amplify.Auth.signIn(
-        username: userProvider.getEmail(),
-        password: userProvider.getPassword(),
-      );
-      if (result.isSignedIn) {
-        signOut();
-        return 'THIS USER IS ALREADY SIGNED IN';
-      } else {
-        return 'ok';
+      String queryDoc = '''query MyQuery {
+      listSignIns {
+        items {
+          id
+          email
+          signedIn
+        }
       }
+    }''';
+
+      var operation = Amplify.API
+          .query<String>(request: GraphQLRequest(document: queryDoc));
+
+      var response = await operation.response;
+      final List<dynamic> signIns =
+      jsonDecode(response.data)['listSignIns']['items'];
+      final emailMatch = signIns
+          .indexWhere((el) => el['email'] == userProvider.getEmail());
+      final id = signIns[emailMatch]['id'];
+      print(id);
+      String graphQLDocument =
+      '''mutation UpdateSignIn(\$id: ID!, \$email: String, \$signedIn: Boolean!) {
+          updateSignIn(input: {id: \$id, email: \$email, signedIn: \$signedIn}) {
+            id
+            email
+            signedIn
+          }
+      }''';
+
+      Amplify.API.mutate(
+        request: GraphQLRequest<String>(
+          document: graphQLDocument,
+          variables: {
+            'id': id,
+            'email': userProvider.getEmail(),
+            'signedIn': signedIn,
+          },
+        ),
+      );
+    } on ApiException catch (e) {
+      print('Mutation failed: $e');
+    }
+  }
+
+  Future<String> signIn(password) async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('curEmail', userProvider.getEmail());
+      await Amplify.Auth.signIn(
+        username: userProvider.getEmail(),
+        password: password,
+      );
+      await storage.write(key: userProvider.getEmail(), value: password);
+      // mutation lock
+      toggleSignIn(true);
+
+      return 'ok';
       // else {
       //   return 'asdf';
       // }
@@ -137,78 +200,167 @@ class AuthService {
       //   print(e);
       //   return 'UNKNOWN_EXCEPTION';
       // }
+    } on auth.UserNotFoundException catch (ex) {
+      return 'USER_NOT_FOUND';
     } on auth.NotAuthorizedException catch (ex) {
-      return ex.message;
+      return 'WRONG USERNAME OR PASSWORD!';
+    } on auth.InvalidStateException catch (ex) {
+      return 'INVALID_STATE';
     } on auth.SignedOutException catch (ex) {
       return 'SIGNED_OUT_EXCEPTION';
     } on auth.SessionExpiredException catch (ex) {
       return 'SESSION_EXPIRED';
-    } on auth.UserNotFoundException catch (ex) {
-      return 'USER_NOT_FOUND';
-    } on auth.InvalidStateException catch (ex) {
-      return 'INVALID_STATE';
     } catch (e) {
-      print(e);
       return 'UNKNOWN_EXCEPTION';
     }
   }
 
-  Future<void> signOut() async {
+  Future<Map<String, dynamic>> restore(email) async {
     try {
-      await Amplify.Auth.signOut();
+      final result = await Amplify.Auth.fetchAuthSession(
+        options: auth.CognitoSessionOptions(
+          getAWSCredentials: true,
+        ),
+      ) as auth.CognitoAuthSession;
+
+      if (result.isSignedIn) {
+        final claims = Jwt.parseJwt(result.userPoolTokens!.idToken);
+
+        return {'claims': claims};
+      } else {
+        return {'claims': null};
+      }
+    } catch (e) {
+      return {'claims': 'EXCEPTION'};
+    }
+  }
+
+  Future<void> signOut(_global) async {
+    try {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.remove('curEmail');
+      await toggleSignIn(false);
+      await storage.delete(key: userProvider.getEmail());
+      await Amplify.Auth.signOut(
+          options: auth.SignOutOptions(
+        globalSignOut: _global,
+      ));
+      userProvider.clear();
+    } catch (e, stacktrace) {
+      print(stacktrace);
+    }
+  }
+
+  checkSignedIn(email) async {
+    try {
+      String graphQLDocument = '''query MyQuery {
+      listSignIns {
+        items {
+          id
+          email
+          signedIn
+        }
+      }
+    }''';
+
+      var operation = Amplify.API
+          .query<String>(request: GraphQLRequest(document: graphQLDocument));
+
+      var response = await operation.response;
+      final List<dynamic> signIns =
+          jsonDecode(response.data)['listSignIns']['items'];
+      try {
+        print(signIns);
+        final hasSignedIn =
+            signIns[signIns.indexWhere((el) => el['email'] == email)]
+                ['signedIn'];
+        return hasSignedIn;
+      } on ApiException catch (e) {
+        print('Api Exception');
+      } catch (e) {
+        // out of index
+        print('email not exist');
+        return null;
+      }
+      // return response.data;
     } catch (e) {
       print(e);
     }
   }
 
+  createSignInModel(email) async {
+    try {
+      String graphQLDocument =
+          '''mutation CreateSignIn(\$email: String, \$signedIn: Boolean!) {
+              createSignIn(input: {email: \$email, signedIn: \$signedIn}) {
+                id
+                email
+                signedIn
+              }
+        }''';
+      var variables = {
+        "email": email,
+        "signedIn": false,
+      };
+      var request = GraphQLRequest<String>(
+        document: graphQLDocument,
+        variables: variables,
+      );
+
+      var operation = Amplify.API.mutate(request: request);
+      var response = await operation.response;
+
+      var data = response.data;
+    } on ApiException catch (e) {
+      print('Mutation failed: $e');
+    }
+    // try {
+    //   // final auth.CognitoAuthSession authState =
+    //   //     await Amplify.Auth.fetchAuthSession(
+    //   //             options: auth.CognitoSessionOptions(getAWSCredentials: true))
+    //   //         as auth.CognitoAuthSession;
+    //   // // print(_parseJwt(authState.userPoolTokens!.accessToken));
+    //   // print(Jwt.isExpired(authState.userPoolTokens!.accessToken));
+    //   // // print(authState.userPoolTokens!.refreshToken);
+    //   // // print(Jwt.parseJwt(authState.userPoolTokens!.refreshToken));
+    //   // // print(_parseJwt(authState.credentials!.sessionToken!);
+    //   final cognitoUser = CognitoUser('drakedog19@gmail.com', userPool);
+    //   final authDetails = AuthenticationDetails(
+    //     username: 'drakedog19@gmail.com',
+    //     password: 'Tnthd001!!',
+    //   );
+    //   CognitoUserSession? session;
+    //   try {
+    //     final awsUser = await Amplify.Auth.getCurrentUser();
+    //     print((await Amplify.Auth.fetchAuthSession()));
+    //     print(awsUser);
+    //     // Amplify.Hub.listen([HubChannel.Auth], (event) {
+    //     //
+    //     // });
+    //     // session = await cognitoUser.authenticateUser(authDetails);
+    //     // print(session?.idToken.getIss());
+    //   } catch (e) {
+    //     print(e);
+    //   }
+    // } catch (e) {
+    //   print(e);
+    // }
+  }
+
   Future<String> getNickname() async {
-    String _decodeBase64(String str) {
-      String output = str.replaceAll('-', '+').replaceAll('_', '/');
-
-      switch (output.length % 4) {
-        case 0:
-          break;
-        case 2:
-          output += '==';
-          break;
-        case 3:
-          output += '=';
-          break;
-        default:
-          throw Exception('Illegal base64url string!"');
-      }
-
-      return utf8.decode(base64Url.decode(output));
-    }
-
-    Map<String, dynamic> _parseJwt(String token) {
-      final parts = token.split('.');
-      if (parts.length != 3) {
-        throw Exception('invalid token');
-      }
-
-      final payload = _decodeBase64(parts[1]);
-      final payloadMap = json.decode(payload);
-      if (payloadMap is! Map<String, dynamic>) {
-        throw Exception('invalid payload');
-      }
-
-      return payloadMap;
-    }
-
     try {
       final authState = await Amplify.Auth.fetchAuthSession(
               options: auth.CognitoSessionOptions(getAWSCredentials: true))
           as auth.CognitoAuthSession;
       if (authState.isSignedIn) {
-        final claims = _parseJwt(authState.userPoolTokens!.idToken);
+        final claims = Jwt.parseJwt(authState.userPoolTokens!.idToken);
         final nickname = claims['nickname'] as String;
         return nickname;
       }
     } catch (e) {
       print(e);
     }
-    return '';
+    return 'Anonymous';
   }
 
   void signUpWithCredentials(SignUpCredentials credentials) async {

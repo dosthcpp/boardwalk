@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:boardwalk/screens/detail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -24,6 +25,8 @@ class _ReviewState extends State<Review> {
 
   @override
   Widget build(BuildContext context) {
+    ReviewArgs args = ModalRoute.of(context)!.settings.arguments as ReviewArgs;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -61,8 +64,8 @@ class _ReviewState extends State<Review> {
             const SizedBox(
               height: 20.0,
             ),
-            const Text(
-              "What did you think of the (nickname)'s spot?",
+            Text(
+              "What did you think of the ${args.host}'s spot?",
               style: TextStyle(
                 fontSize: 17.0,
               ),
@@ -217,13 +220,12 @@ class _ReviewState extends State<Review> {
                   child: TextField(
                     maxLines: 8,
                     decoration: InputDecoration.collapsed(
-                      hintText:
-                          "Please leave a honest feedback for additional improvement.",
-                      hintStyle: TextStyle(
-                        fontSize: 18.0,
-                        color: Colors.black54,
-                      )
-                    ),
+                        hintText:
+                            "Please leave a honest feedback for additional improvement.",
+                        hintStyle: TextStyle(
+                          fontSize: 18.0,
+                          color: Colors.black54,
+                        )),
                   ),
                 ),
               ),
@@ -238,11 +240,11 @@ class _ReviewState extends State<Review> {
                 onPressed: () {
                   Navigator.pop(context);
                   Fluttertoast.showToast(
-                      msg: "Thank for your feedback!",
-                      backgroundColor: Colors.black54,
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 3,
+                    msg: "Thank for your feedback!",
+                    backgroundColor: Colors.black54,
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 3,
                   );
                 },
                 color: Colors.indigo,

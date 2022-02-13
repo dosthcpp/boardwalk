@@ -1,7 +1,23 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:boardwalk/api/api_service.dart';
+import 'package:amplify_api/amplify_api.dart' show GraphQLResponseError;
 import 'package:boardwalk/main.dart';
 import 'package:boardwalk/screens/home.dart' show Information;
+import 'package:google_maps_flutter/google_maps_flutter.dart' as GMap;
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
+import 'package:super_tooltip/super_tooltip.dart';
+
+import 'package:boardwalk/screens/review.dart';
 import 'package:flutter/material.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
+
+class ReviewArgs {
+  String host;
+
+  ReviewArgs({required this.host});
+}
 
 class Detail extends StatefulWidget {
   static const id = 'detail';
@@ -13,10 +29,144 @@ class Detail extends StatefulWidget {
 }
 
 class _DetailState extends State<Detail> {
+  Completer<GMap.GoogleMapController> _controller = Completer();
+  final ApiService _apiService = ApiService();
   bool isChecked = false;
+
+  SuperTooltip? tooltip;
+
+  late var approved, nonApproved;
+
+  Future<bool> _willPopCallback() async {
+    // If the tooltip is open we don't pop the page on a backbutton press
+    // but close the ToolTip
+    if (tooltip!.isOpen) {
+      tooltip!.close();
+      return false;
+    }
+    return true;
+  }
+
+  void onTapWhenNonHost(joined) {
+    if (tooltip != null && tooltip!.isOpen) {
+      tooltip!.close();
+      return;
+    }
+
+    tooltip = SuperTooltip(
+      maxHeight: 300.0,
+      popupDirection: TooltipDirection.down,
+      content: Center(
+        child: Material(
+          child: ListView.builder(
+            shrinkWrap: true,
+            physics: AlwaysScrollableScrollPhysics(),
+            itemBuilder: (context, index) {
+              return ListTile(
+                title: Text(joined[index]),
+              );
+            },
+            itemCount: joined.length,
+          ),
+        ),
+      ),
+    );
+
+    tooltip!.show(context);
+  }
+
+  void onTapWhenHost(id, approved, nonApproved) {
+    if (tooltip != null && tooltip!.isOpen) {
+      tooltip!.close();
+      return;
+    }
+
+    var approvedMap = List.from(approved).map((e) {
+      return {"key": e, "value": true};
+    });
+    var nonApprovedMap = List.from(nonApproved).map((e) {
+      return {"key": e, "value": false};
+    });
+
+    tooltip = SuperTooltip(
+      maxHeight: 200.0,
+      popupDirection: TooltipDirection.down,
+      top: 50.0,
+      right: 50.0,
+      left: 50.0,
+      bottom: 90.0,
+      content: Material(
+        child: Column(
+          children: [
+            ListView.builder(
+              shrinkWrap: true,
+              primary: false,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(nonApproved[index]),
+                  trailing: MaterialButton(
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: EdgeInsets.zero,
+                    child: const Text(
+                      "Approve",
+                      style: TextStyle(
+                        color: Colors.green,
+                      ),
+                    ),
+                    onPressed: () async {
+                      // List<GraphQLResponseError>? result =
+                      //     await _apiService.approve(
+                      //   id,
+                      //   [...approvedMap, ...nonApprovedMap],
+                      //   nonApproved[index],
+                      // );
+                      setState(() {
+                        approved.add(nonApproved[index]);
+                        nonApproved.removeWhere((el) => el == nonApproved[index]);
+                      });
+                      // setState(() {
+                      //   approvedMap.
+                      // });
+                      // if (result!.isEmpty) {
+                      //
+                      // } else {
+                      //   print('An error occured!');
+                      // }
+                    },
+                  ),
+                );
+              },
+              itemCount: nonApproved.length,
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              primary: false,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(
+                    approved[index],
+                  ),
+                  trailing: const Icon(
+                    Icons.check,
+                    color: Colors.green,
+                  ),
+                );
+              },
+              itemCount: approved.length,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    tooltip!.show(context);
+  }
 
   @override
   Widget build(BuildContext context) {
+    Map<dynamic, dynamic> sessionInfo =
+        ModalRoute.of(context)!.settings.arguments as Map<dynamic, dynamic>;
+
     Color getColor(Set<MaterialState> states) {
       const Set<MaterialState> interactiveStates = <MaterialState>{
         MaterialState.pressed,
@@ -123,9 +273,9 @@ class _DetailState extends State<Detail> {
               const SizedBox(
                 height: 20.0,
               ),
-              const Text(
-                "Let\'s jog in Alberta Banks",
-                style: TextStyle(
+              Text(
+                sessionInfo['title'],
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 20.0,
                 ),
@@ -133,49 +283,208 @@ class _DetailState extends State<Detail> {
               const SizedBox(
                 height: 20.0,
               ),
-              const Information(
+              Information(
                 textSize: 13.5,
                 imageUrl: 'assets/shoes.png',
-                description: 'Jogging, 1.2Mi~2.17Mi',
+                description: sessionInfo['event'],
                 bold: false,
               ),
               const SizedBox(
                 height: 10.0,
               ),
-              const Information(
+              Information(
                 textSize: 13.5,
                 imageUrl: 'assets/pin.png',
-                description: 'Alberta Banks Park,\nOakwood, Georgia',
+                description: sessionInfo['address'],
                 bold: false,
               ),
               const SizedBox(
                 height: 10.0,
               ),
-              const Information(
-                textSize: 13.5,
-                imageUrl: 'assets/person.png',
-                description: '2~5 People',
-                bold: false,
+              InkWell(
+                onTap: () async {
+                  var match = List.from(jsonDecode(await _apiService.query())[
+                              'listSessions']['items'])
+                          .where((el) => el['id'] == sessionInfo['id'])
+                          .toList()[0] ??
+                      {};
+                  // if (sessionInfo['host'] == 'John') {
+                  if (userProvider.getNickname() == sessionInfo['host']) {
+                    // 호스트인 사람이 탭
+                    approved = List.from(match['joined'])
+                        .where((el) => el['value'] == true)
+                        .toList()
+                        .map((el) => el['key'])
+                        .toList();
+                    nonApproved = List.from(match['joined'])
+                        .where((el) => el['value'] == false)
+                        .toList()
+                        .map((el) => el['key'])
+                        .toList();
+                    if (tooltip != null && tooltip!.isOpen) {
+                      tooltip!.close();
+                      return;
+                    }
+
+                    var approvedMap = List.from(approved).map((e) {
+                      return {"key": e, "value": true};
+                    });
+                    var nonApprovedMap = List.from(nonApproved).map((e) {
+                      return {"key": e, "value": false};
+                    });
+
+                    SuperTooltip(
+                      maxHeight: 200.0,
+                      popupDirection: TooltipDirection.down,
+                      top: 50.0,
+                      right: 50.0,
+                      left: 50.0,
+                      bottom: 90.0,
+                      content: Material(
+                        child: Column(
+                          children: [
+                            ListView.builder(
+                              shrinkWrap: true,
+                              primary: false,
+                              itemBuilder: (context, index) {
+                                return ListTile(
+                                  title: Text(nonApproved[index]),
+                                  trailing: MaterialButton(
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    padding: EdgeInsets.zero,
+                                    child: const Text(
+                                      "Approve",
+                                      style: TextStyle(
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                    onPressed: () async {
+                                      // List<GraphQLResponseError>? result =
+                                      //     await _apiService.approve(
+                                      //   id,
+                                      //   [...approvedMap, ...nonApprovedMap],
+                                      //   nonApproved[index],
+                                      // );
+                                      setState(() {
+                                        approved.add(nonApproved[index]);
+                                        // nonApproved.removeWhere((el) => el == nonApproved[index]);
+                                      });
+                                      // setState(() {
+                                      //   approvedMap.
+                                      // });
+                                      // if (result!.isEmpty) {
+                                      //
+                                      // } else {
+                                      //   print('An error occured!');
+                                      // }
+                                    },
+                                  ),
+                                );
+                              },
+                              itemCount: nonApproved.length,
+                            ),
+                            ListView.builder(
+                              shrinkWrap: true,
+                              primary: false,
+                              itemBuilder: (context, index) {
+                                return ListTile(
+                                  title: Text(
+                                    approved[index],
+                                  ),
+                                  trailing: const Icon(
+                                    Icons.check,
+                                    color: Colors.green,
+                                  ),
+                                );
+                              },
+                              itemCount: approved.length,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ).show(context);
+                    // onTapWhenHost(sessionInfo['id'], approved, nonApproved);
+                  } else {
+                    // 호스트 아닌 사람이 탭
+                    var total = List.from(match['joined'])
+                        .where((el) => el['value'] == true)
+                        .toList()
+                        .map((el) => el['key'])
+                        .toList();
+                    onTapWhenNonHost(total);
+                  }
+                },
+                child: Information(
+                  textSize: 13.5,
+                  imageUrl: 'assets/person.png',
+                  description:
+                      '${sessionInfo['participants'][0]} ~ ${sessionInfo['participants'][1]} People',
+                  bold: false,
+                ),
               ),
               const SizedBox(
                 height: 10.0,
               ),
-              const Information(
+              Information(
                 textSize: 13.5,
                 imageUrl: 'assets/clock.png',
-                description: '10.11.21(Sun) 6AM ~ 8:30AM',
+                description:
+                    '${sessionInfo['startTime']} ~\n${sessionInfo['endTime']}',
                 bold: false,
               ),
               const SizedBox(
                 height: 10.0,
               ),
               const Information(
-                  textSize: 13.5,
-                  textColor: Colors.redAccent,
-                  imageColor: Colors.redAccent,
-                  imageUrl: 'assets/megaphone.png',
-                  description: 'Fully Vaccinated participant ONLY.',
-                  bold: false),
+                textSize: 13.5,
+                textColor: Colors.redAccent,
+                imageColor: Colors.redAccent,
+                imageUrl: 'assets/megaphone.png',
+                description: 'Fully Vaccinated participant ONLY.',
+                bold: false,
+              ),
+              const Divider(
+                color: Colors.black54,
+                thickness: 1.0,
+                height: 20.0,
+              ),
+              Center(
+                child: Builder(
+                  builder: (context) {
+                    List<Marker> _markers = [];
+                    _markers.add(
+                      Marker(
+                        markerId: MarkerId("1"),
+                        draggable: true,
+                        onTap: () => print("Marker!"),
+                        position: LatLng(
+                          sessionInfo['coordinate'][0],
+                          sessionInfo['coordinate'][1],
+                        ),
+                      ),
+                    );
+                    return SizedBox(
+                      width: 350.0,
+                      height: 150.0,
+                      child: GMap.GoogleMap(
+                        markers: _markers.toSet(),
+                        initialCameraPosition: GMap.CameraPosition(
+                          target: GMap.LatLng(
+                            sessionInfo['coordinate'][0],
+                            sessionInfo['coordinate'][1],
+                          ),
+                          zoom: 14.4746,
+                        ),
+                        onMapCreated: (GMap.GoogleMapController controller) {
+                          if (!_controller.isCompleted) {
+                            _controller.complete(controller);
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
               const Divider(
                 color: Colors.black54,
                 thickness: 1.0,
@@ -191,14 +500,23 @@ class _DetailState extends State<Detail> {
                   fontSize: 18.0,
                 ),
               ),
-              const SizedBox(
-                height: 10.0,
-              ),
-              const Supply(
-                text: 'Running shoes',
-              ),
-              const SizedBox(
-                height: 20.0,
+              SizedBox(
+                height: 50.0,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  separatorBuilder: (context, index) {
+                    return const SizedBox(
+                      width: 20.0,
+                    );
+                  },
+                  itemBuilder: (context, index) {
+                    return Supply(
+                      text: sessionInfo['necessarySupplies'][index],
+                    );
+                  },
+                  scrollDirection: Axis.horizontal,
+                  itemCount: sessionInfo['necessarySupplies'].length,
+                ),
               ),
               const Text(
                 "Optional supplies",
@@ -207,21 +525,23 @@ class _DetailState extends State<Detail> {
                   fontSize: 18.0,
                 ),
               ),
-              const SizedBox(
-                height: 10.0,
-              ),
-              Row(
-                children: const [
-                  Supply(
-                    text: 'Training outfit',
-                  ),
-                  SizedBox(
-                    width: 20.0,
-                  ),
-                  Supply(
-                    text: 'Personal drink',
-                  ),
-                ],
+              SizedBox(
+                height: 50.0,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  separatorBuilder: (context, index) {
+                    return const SizedBox(
+                      width: 20.0,
+                    );
+                  },
+                  itemBuilder: (context, index) {
+                    return Supply(
+                      text: sessionInfo['optionalSupplies'][index],
+                    );
+                  },
+                  scrollDirection: Axis.horizontal,
+                  itemCount: sessionInfo['optionalSupplies'].length,
+                ),
               ),
               const SizedBox(
                 height: 10.0,
@@ -236,10 +556,8 @@ class _DetailState extends State<Detail> {
               const SizedBox(
                 height: 10.0,
               ),
-              const Center(
-                child: Text(
-                  "Please prepare your own running shoes and be punctual!",
-                ),
+              Text(
+                sessionInfo['notification'],
               ),
               const Divider(
                 height: 40.0,
@@ -256,7 +574,18 @@ class _DetailState extends State<Detail> {
               const SizedBox(
                 height: 15.0,
               ),
-              Profile(),
+              Profile(
+                hostName: sessionInfo['host'],
+                onTapProfileImage: () {
+                  Navigator.pushNamed(
+                    context,
+                    Review.id,
+                    arguments: ReviewArgs(
+                      host: userProvider.getNickname(),
+                    ),
+                  );
+                },
+              ),
               const Divider(
                 height: 40.0,
                 thickness: 1.0,
@@ -264,19 +593,19 @@ class _DetailState extends State<Detail> {
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     "Main event",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18.0,
                     ),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 5.0,
                   ),
                   Text(
-                    "Running",
+                    sessionInfo['event'],
                   ),
                 ],
               ),
@@ -306,19 +635,19 @@ class _DetailState extends State<Detail> {
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     "Self introduction",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18.0,
                     ),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 5.0,
                   ),
                   Text(
-                    "Run once a week and make your life healthy!",
+                    sessionInfo['host'],
                   ),
                 ],
               ),
@@ -381,34 +710,79 @@ class _DetailState extends State<Detail> {
                         SizedBox(
                           width: MediaQuery.of(context).size.width,
                           child: MaterialButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (isChecked) {
-                                AwesomeDialog(
-                                  context: context,
-                                  animType: AnimType.SCALE,
-                                  dialogType: DialogType.SUCCES,
-                                  btnOk: ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      primary: Colors.indigo,
-                                    ),
-                                    child: const Text(
-                                      'Confirm',
-                                      style: TextStyle(
-                                        color: Colors.white,
+                                var match = List.from(jsonDecode(
+                                                await _apiService.query())[
+                                            'listSessions']['items'])
+                                        .where((el) =>
+                                            el['id'] == sessionInfo['id'])
+                                        .toList()[0] ??
+                                    {};
+                                if (List.from(match['joined'])
+                                    .where((el) =>
+                                        el['key'] == userProvider.getNickname())
+                                    .toList()
+                                    .isNotEmpty) {
+                                  AwesomeDialog(
+                                    context: context,
+                                    animType: AnimType.SCALE,
+                                    dialogType: DialogType.ERROR,
+                                    btnOk: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        primary: Colors.indigo,
+                                      ),
+                                      child: const Text(
+                                        'Confirm',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  body: const Center(
-                                    child: Text(
-                                      'Your request has been sent to Sangjun. The host will let you know if he/she approve or not.',
-                                      textAlign: TextAlign.center,
+                                    body: Center(
+                                      child: Text(
+                                        'Your request was not sent to ${sessionInfo['host']}.\nReason: You have already requested for this session.',
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
-                                  ),
-                                  btnOkOnPress: () {},
-                                ).show();
+                                    btnOkOnPress: () {},
+                                  ).show();
+                                } else {
+                                  await _apiService.join(
+                                    sessionInfo['id'],
+                                    sessionInfo['joined'],
+                                    userProvider.getNickname(),
+                                  );
+                                  AwesomeDialog(
+                                    context: context,
+                                    animType: AnimType.SCALE,
+                                    dialogType: DialogType.SUCCES,
+                                    btnOk: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        primary: Colors.indigo,
+                                      ),
+                                      child: const Text(
+                                        'Confirm',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    body: Center(
+                                      child: Text(
+                                        'Your request has been sent to ${sessionInfo['host']}. The host will let you know if he/she approve or not.',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    btnOkOnPress: () {},
+                                  ).show();
+                                }
                               } else {
                                 AwesomeDialog(
                                   context: context,
@@ -428,9 +802,9 @@ class _DetailState extends State<Detail> {
                                       ),
                                     ),
                                   ),
-                                  body: const Center(
+                                  body: Center(
                                     child: Text(
-                                      'Your request was not sent to Sangjun.\nReason: Terms and conditions not checked.',
+                                      'Your request was not sent to ${sessionInfo['host']}.\nReason: Terms and conditions not checked.',
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
@@ -493,9 +867,15 @@ class Supply extends StatelessWidget {
 }
 
 class Profile extends StatelessWidget {
-  String buttonTitle;
+  String buttonTitle, hostName;
+  VoidCallback? onTapProfileImage;
 
-  Profile({Key? key, this.buttonTitle = 'Follow'}) : super(key: key);
+  Profile({
+    Key? key,
+    this.hostName = '',
+    this.buttonTitle = 'Follow',
+    this.onTapProfileImage,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -511,15 +891,28 @@ class Profile extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    child: Image.asset(
-                      'assets/user.png',
-                      color: Colors.black54,
-                      scale: 30.0,
-                    ),
-                    backgroundColor: Colors.black12,
-                    radius: 35.0,
-                  ),
+                  onTapProfileImage != null
+                      ? InkWell(
+                          onTap: onTapProfileImage,
+                          child: CircleAvatar(
+                            child: Image.asset(
+                              'assets/user.png',
+                              color: Colors.black54,
+                              scale: 30.0,
+                            ),
+                            backgroundColor: Colors.black12,
+                            radius: 35.0,
+                          ),
+                        )
+                      : CircleAvatar(
+                          child: Image.asset(
+                            'assets/user.png',
+                            color: Colors.black54,
+                            scale: 30.0,
+                          ),
+                          backgroundColor: Colors.black12,
+                          radius: 35.0,
+                        ),
                   const SizedBox(
                     width: 30.0,
                   ),
@@ -530,9 +923,11 @@ class Profile extends StatelessWidget {
                         text: TextSpan(
                           children: [
                             TextSpan(
-                              text: userProvider.getNickname(),
+                              text: hostName,
                               style: TextStyle(
-                                fontSize: userProvider.getNickname().length > 5 ? 13.0 : 25.0,
+                                fontSize: userProvider.getNickname().length > 5
+                                    ? 13.0
+                                    : 25.0,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
